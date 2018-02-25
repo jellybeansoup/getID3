@@ -2057,6 +2057,7 @@ class getid3_id3v2 extends getid3_handler
 						$this->warning('CHAP subframe "'.$subframe['name'].'" at frame offset '.$frame_offset.' claims to be "'.$subframe['size'].'" bytes, which is more than the available data ('.(strlen($parsedFrame['data']) - $frame_offset).' bytes)');
 						break;
 					}
+					$subframe['offset'] = $frame_offset;
 					$subframe_rawdata = substr($parsedFrame['data'], $frame_offset, $subframe['size']);
 					$frame_offset += $subframe['size'];
 
@@ -2088,6 +2089,37 @@ class getid3_id3v2 extends getid3_handler
 							$parsedFrame['chapter_name']        = $encoding_converted_text;
 						} elseif ($subframe['name'] == 'TIT3') {
 							$parsedFrame['chapter_description'] = $encoding_converted_text;
+						}
+						$parsedFrame['subframes'][] = $subframe;
+					} elseif (($subframe['name'] == 'WXXX') || ($subframe['name'] == 'APIC')) {
+						unset($parsedSubframe);
+						$parsedSubframe['frame_name']      = $subframe['name'];
+						$parsedSubframe['frame_flags_raw'] = $subframe['flags_raw'];
+						$parsedSubframe['data']            = substr($subframe_rawdata, 0, $subframe['size']);
+						$parsedSubframe['datalength']      = getid3_lib::CastAsInt($subframe['size']);
+						$parsedSubframe['dataoffset']      = $subframe['offset'];
+						$this->ParseID3v2Frame($parsedSubframe);
+						if ($subframe['name'] == 'WXXX') {
+							$subframe['url'] = $parsedSubframe['url'];
+							$subframe['url_description'] = $parsedSubframe['description'];
+
+							$parsedFrame['chapter_url'] = [
+								'url' => $parsedSubframe['url'],
+								'url_description' => $parsedSubframe['description'],
+							];
+
+						} elseif ($subframe['name'] == 'APIC') {
+							$subframe['image_data'] = $parsedSubframe['data'];
+							$subframe['image_mime'] = $parsedSubframe['image_mime'];
+							$subframe['image_width'] = $parsedSubframe['image_width'];
+							$subframe['image_height'] = $parsedSubframe['image_height'];
+	
+							$parsedFrame['chapter_image'] = [
+								'data' => $parsedSubframe['data'],
+								'mime' => $parsedSubframe['image_mime'],
+								'width' => $parsedSubframe['image_width'],
+								'height' => $parsedSubframe['image_height'],
+							];
 						}
 						$parsedFrame['subframes'][] = $subframe;
 					} else {
